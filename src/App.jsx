@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Globe from 'react-globe.gl'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   Area,
   AreaChart,
@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { ArrowDown, BrainCircuit, Globe2, Newspaper, Radar, X } from 'lucide-react'
+import { ArrowDown, BrainCircuit, Globe2, MessageCircle, Newspaper, Radar, X } from 'lucide-react'
 
 const NEWS_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1446776877081-d282a0f896e2'
 const SNAPI_BASE = 'https://api.spaceflightnewsapi.net/v4'
@@ -112,8 +112,19 @@ function App() {
     isFeatured: false,
     hasLaunch: false,
   })
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: 'assistant',
+      content:
+        'Ask me anything. I use free public web search (DuckDuckGo + Wikipedia) to generate answers.',
+    },
+  ])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const dashboardRef = useRef(null)
   const globeRef = useRef(null)
+  const chatScrollRef = useRef(null)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -231,6 +242,12 @@ function App() {
     )
   }, [filters.search, rawNews])
 
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+    }
+  }, [chatMessages, chatLoading, chatOpen])
+
   const aiSummary = useMemo(() => {
     const topSource = news[0]?.news_site ?? 'Global Intelligence Feed'
     return `AI analyzer detects steady positive momentum around infrastructure, healthcare, and cross-border trade. ${topSource} currently leads story velocity with the strongest engagement curve in the last cycle.`
@@ -326,6 +343,73 @@ function App() {
 
   const closeModal = () => {
     setSelectedNews(null)
+  }
+
+  const askWebAssistant = async () => {
+    const query = chatInput.trim()
+    if (!query || chatLoading) return
+
+    setChatMessages((prev) => [...prev, { role: 'user', content: query }].slice(-20))
+    setChatInput('')
+    setChatLoading(true)
+
+    try {
+      const encoded = encodeURIComponent(query)
+      const [ddgRes, wikiSearchRes] = await Promise.allSettled([
+        fetch(`https://api.duckduckgo.com/?q=${encoded}&format=json&no_html=1&no_redirect=1`).then((r) => r.json()),
+        fetch(
+          `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encoded}&limit=1&namespace=0&format=json&origin=*`,
+        ).then((r) => r.json()),
+      ])
+
+      let answer = ''
+      const sources = []
+
+      if (ddgRes.status === 'fulfilled') {
+        const ddg = ddgRes.value
+        if (ddg.AbstractText) {
+          answer += `${ddg.AbstractText}\n\n`
+        }
+        if (ddg.AbstractURL) {
+          sources.push(ddg.AbstractURL)
+        }
+      }
+
+      if (wikiSearchRes.status === 'fulfilled' && Array.isArray(wikiSearchRes.value) && wikiSearchRes.value[1]?.[0]) {
+        const wikiTitle = wikiSearchRes.value[1][0]
+        const wikiSummaryRes = await fetch(
+          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiTitle)}`,
+        ).then((r) => r.json())
+        if (wikiSummaryRes.extract) {
+          answer += `${wikiSummaryRes.extract}\n\n`
+        }
+        if (wikiSummaryRes.content_urls?.desktop?.page) {
+          sources.push(wikiSummaryRes.content_urls.desktop.page)
+        }
+      }
+
+      const finalAnswer =
+        answer.trim() ||
+        'I could not find a strong direct summary from the public web APIs right now. Please try a more specific query.'
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `${finalAnswer}${sources.length ? `\nSources: ${sources.join(' | ')}` : ''}`,
+        },
+      ].slice(-20))
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Web assistant is temporarily unavailable. Please try again in a moment.',
+        },
+      ].slice(-20))
+    } finally {
+      setChatLoading(false)
+    }
   }
 
   return (
@@ -617,6 +701,80 @@ function App() {
           </button>
         </div>
       </section>
+
+      <div className="fixed bottom-5 right-5 z-40">
+        <AnimatePresence>
+          {chatOpen && (
+            <motion.section
+              initial={{ opacity: 0, y: 18, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="mb-3 w-[min(92vw,380px)] rounded-xl border border-cyan-500/30 bg-[#031122]/95 p-3 shadow-2xl backdrop-blur"
+            >
+              <header className="mb-3 flex items-center justify-between">
+                <h3 className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">
+                  <MessageCircle size={14} /> Web Chat Assistant
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setChatOpen(false)}
+                  className="rounded-md border border-slate-700 p-1 text-slate-300 transition hover:text-slate-100"
+                  aria-label="Close chat"
+                >
+                  <X size={14} />
+                </button>
+              </header>
+              <div
+                ref={chatScrollRef}
+                className="max-h-72 space-y-2 overflow-y-auto rounded-md border border-slate-700/70 bg-slate-950/70 p-2"
+              >
+                {chatMessages.map((msg, idx) => (
+                  <div
+                    key={`${msg.role}-${idx}`}
+                    className={`rounded-md px-3 py-2 text-xs leading-5 ${
+                      msg.role === 'user'
+                        ? 'ml-6 bg-cyan-500/15 text-cyan-100'
+                        : 'mr-6 bg-slate-800/80 text-slate-200'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                ))}
+                {chatLoading ? <p className="text-xs text-slate-400">Searching web...</p> : null}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') askWebAssistant()
+                  }}
+                  placeholder="Ask with live web search..."
+                  className="flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 outline-none ring-cyan-300 placeholder:text-slate-500 focus:ring-1"
+                />
+                <button
+                  type="button"
+                  onClick={askWebAssistant}
+                  disabled={chatLoading}
+                  className="rounded-md border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-cyan-200 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Ask
+                </button>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        <button
+          type="button"
+          onClick={() => setChatOpen((prev) => !prev)}
+          className="ml-auto inline-flex h-12 w-12 items-center justify-center rounded-full border border-cyan-400/50 bg-cyan-500/20 text-cyan-100 shadow-[0_0_20px_rgba(34,211,238,0.45)] transition hover:bg-cyan-500/30"
+          aria-label="Toggle chat assistant"
+        >
+          <MessageCircle size={20} />
+        </button>
+      </div>
 
       {selectedNews && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm">
