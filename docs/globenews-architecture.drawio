@@ -1,0 +1,67 @@
+<mxfile host="app.diagrams.net" modified="2026-04-21T00:00:00.000Z" agent="Codex" version="26.0.0">
+  <diagram id="globenews-architecture" name="GlobeNews Architecture UML">
+    <mxGraphModel dx="1720" dy="980" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="GlobeNews Project Documentation (UML + API Implementation)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0b1020;strokeColor=#22d3ee;fontColor=#e2e8f0;fontStyle=1;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="500" y="20" width="980" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="runtime" value="Runtime / Build Context&#xa;- React 19 + Vite 8&#xa;- Tailwind v4 via @tailwindcss/vite&#xa;- Single-page app (no router)&#xa;- Entry: src/main.jsx -&gt; App.jsx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#082f49;strokeColor=#38bdf8;fontColor=#e0f2fe;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="320" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="app" value="App Component (src/App.jsx)&#xa;&lt;&lt;Main Orchestrator&gt;&gt;&#xa;- useEffect() dashboard polling&#xa;- useState() for news, kpis, demographics&#xa;- Modal open/close + detail fetch&#xa;- useMemo() AI summary generation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#818cf8;fontColor=#e0e7ff;" vertex="1" parent="1">
+          <mxGeometry x="430" y="110" width="400" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="ui" value="UI Modules (Neon Dashboard)&#xa;1. Hero + 3D Globe (react-globe.gl, framer-motion)&#xa;2. KPI Cards (score, zones, latency, sourceCount)&#xa;3. AI Sentiment + Demographic charts (recharts)&#xa;4. Live News Feed cards&#xa;5. In-app Details Modal (no external navigation)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#052e16;strokeColor=#34d399;fontColor=#dcfce7;" vertex="1" parent="1">
+          <mxGeometry x="900" y="110" width="500" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="state" value="State Model (React)&#xa;news[]: merged SNAPI articles+blogs&#xa;selectedNews: active card for modal&#xa;newsDetails{}: cached detail by id&#xa;detailLoading: modal fetch status&#xa;populationDistribution[]: normalized by region&#xa;kpis{score,zones,latency,sourceCount}&#xa;loading: feed sync status" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3f1d2e;strokeColor=#f472b6;fontColor=#fce7f3;" vertex="1" parent="1">
+          <mxGeometry x="430" y="300" width="460" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="api" value="Public APIs (Client-side fetch)&#xa;SNAPI v4&#xa;- GET /v4/articles/?limit=8&#xa;- GET /v4/blogs/?limit=8&#xa;- GET /v4/articles/{id}/ (modal)&#xa;- GET /v4/blogs/{id}/ (modal)&#xa;USGS&#xa;- earthquakes/feed/v1.0/summary/all_hour.geojson&#xa;REST Countries&#xa;- /v3.1/all?fields=region,population" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3f3f0f;strokeColor=#eab308;fontColor=#fef9c3;" vertex="1" parent="1">
+          <mxGeometry x="930" y="330" width="470" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="transform" value="Data Transformation Pipeline&#xa;Parallel fetch (Promise.allSettled)&#xa; -&gt; map article/blog payloads to normalized card model&#xa; -&gt; merge + sort by published_at desc&#xa; -&gt; fallback data on failure&#xa; -&gt; derive KPI score + latency + source count&#xa; -&gt; aggregate countries by region + normalize population %" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#94a3b8;fontColor=#e2e8f0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="530" width="580" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="sequence" value="Runtime Sequence&#xa;1) App mounts&#xa;2) fetchDashboardData() executes immediately&#xa;3) setInterval refresh every 60s&#xa;4) UI updates cards/charts/globe metrics&#xa;5) User clicks news item -&gt; openNewsDetails()&#xa;6) Detail endpoint called (by kind + id)&#xa;7) Cache newsDetails[item.id] and render modal content" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#172554;strokeColor=#60a5fa;fontColor=#dbeafe;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="590" width="360" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="deps" value="Key Dependencies&#xa;react, react-dom&#xa;react-globe.gl + three&#xa;framer-motion&#xa;recharts&#xa;lucide-react&#xa;tailwindcss + @tailwindcss/vite" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f2937;strokeColor=#9ca3af;fontColor=#f3f4f6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="320" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="notes" value="Implementation Notes&#xa;- No React Router: all interactions are in-page&#xa;- Modal replaces outbound links for detail view&#xa;- Fallback datasets preserve UX during API errors&#xa;- KPI latency computed via performance.now()&#xa;- Diagram source: current code in App.jsx/main.jsx/vite.config.js" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#22d3ee;fontColor=#d1fae5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="320" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge1" style="endArrow=block;endFill=1;strokeColor=#60a5fa;" edge="1" parent="1" source="runtime" target="app">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge2" style="endArrow=block;endFill=1;strokeColor=#34d399;" edge="1" parent="1" source="app" target="ui">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge3" style="endArrow=block;endFill=1;strokeColor=#f472b6;" edge="1" parent="1" source="app" target="state">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge4" style="endArrow=block;endFill=1;strokeColor=#eab308;" edge="1" parent="1" source="api" target="transform">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge5" style="endArrow=block;endFill=1;strokeColor=#94a3b8;" edge="1" parent="1" source="transform" target="state">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge6" style="endArrow=block;endFill=1;strokeColor=#60a5fa;" edge="1" parent="1" source="state" target="ui">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge7" style="endArrow=block;endFill=1;strokeColor=#a78bfa;" edge="1" parent="1" source="app" target="transform">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge8" style="endArrow=block;endFill=1;strokeColor=#9ca3af;" edge="1" parent="1" source="deps" target="app">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge9" style="endArrow=block;endFill=1;strokeColor=#22d3ee;" edge="1" parent="1" source="app" target="sequence">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
